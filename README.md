@@ -1,13 +1,13 @@
-# Kurdish NER  
+# 🏷️ Kurdish NER
 
 **Demo:** https://kurdish-ner-app-dhkvzatwygtk8rvvgwbty3.streamlit.app/
 
-A fine-tuned XLM-RoBERTa model for Named Entity Recognition (NER) on Kurmanji Kurdish.
+A fine-tuned XLM-RoBERTa model for Named Entity Recognition (NER) on Kurmanji Kurdish (Hawar Latin alphabet).
 
 ## 📖 Overview
 
 - **Base model:** xlm-roberta-base
-- **Fine-tuned on:** ~8,146 sentences (train/test 80%/20%)
+- **Fine-tuned on:** Manually annotated Kurmanji Kurdish text dataset
 - **Supported entity types:**
   - PER (person)
   - LOC (location)
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Then open http://localhost:8501 in your browser.
+The app will automatically open in your browser, or you can manually navigate to the URL shown in the terminal (typically http://localhost:8501).
 
 ## 🚀 Usage
 
@@ -44,12 +44,12 @@ Then open http://localhost:8501 in your browser.
 
 ## 📊 Model Performance
 
-| Entity | Precision | Recall | F1 | Support |
-|--------|-----------|--------|----|---------| 
-| PER    | 0.872     | 0.867  | 0.869 | 652     |
-| LOC    | 0.882     | 0.882  | 0.882 | 1,047   |
-| ORG    | 0.728     | 0.793  | 0.759 | 739     |
-| **Overall** | **0.833** | **0.851** | **0.841** | — |
+| Entity | Precision | Recall | F1 |
+|--------|-----------|--------|----|
+| PER    | 0.872     | 0.867  | 0.869 |
+| LOC    | 0.882     | 0.882  | 0.882 |
+| ORG    | 0.728     | 0.793  | 0.759 |
+| **Overall** | **0.833** | **0.851** | **0.841** |
 
 *(Metrics on held-out test set.)*
 
