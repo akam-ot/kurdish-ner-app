@@ -1,78 +1,63 @@
-# Kurdish NER
+# Kurdish NER  
 
-A Streamlit app and Hugging Face model for Named Entity Recognition (NER) in Kurmanji Kurdish (Hawar Latin script).
+**Demo:** https://kurdish-ner-app-dhkvzatwygtk8rvvgwbty3.streamlit.app/
 
----
+A fine-tuned XLM-RoBERTa model for Named Entity Recognition (NER) on Kurmanji Kurdish.
 
 ## 📖 Overview
 
-This repository provides a fine-tuned xlm-roberta-base model for NER over three entity types: PERSON (PER), LOCATION (LOC), and ORGANIZATION (ORG). It includes:
+- **Base model:** xlm-roberta-base
+- **Fine-tuned on:** ~8,146 sentences (train/test 80%/20%)
+- **Supported entity types:**
+  - PER (person)
+  - LOC (location)
+  - ORG (organization)
 
-- A Streamlit demo (`app.py`) for interactive inference
-- A model card with training details and evaluation results
-- Scripts to reproduce training, evaluation, and error analysis in Colab
+## 🛠️ Getting Started
 
----
-
-## 🤗 Model Card
-
-- **Model URI**: [hf.co/akam-ot/ku-ner-xlmr](https://hf.co/akam-ot/ku-ner-xlmr)
-- **Base**: xlm-roberta-base (270M params, 12 layers, 768 hidden, 12 heads)
-- **Head**: token classification linear layer predicting 7 BIO tags: O, B-PER, I-PER, B-LOC, I-LOC, B-ORG, I-ORG
-
-## 🛠 Training Details
-
-| Setting | Value |
-|---------|-------|
-| Epochs | 5 |
-| Batch size | 16 |
-| Max sequence length | 128 tokens |
-| Optimizer | AdamW (weight_decay=0.01) |
-| Learning rate | 2e-5 |
-| Warmup steps | 500 |
-| Gradient clipping | 1.0 |
-
-## 📊 Evaluation
-
-| Entity | Precision | Recall | F1 Score |
-|--------|-----------|--------|----------|
-| PER | 0.872 | 0.867 | 0.869 |
-| LOC | 0.882 | 0.883 | 0.882 |
-| ORG | 0.728 | 0.793 | 0.759 |
-| **Overall** | **0.833** | **0.851** | **0.841** |
-
----
-
-## 🚀 Usage
+### 1. Clone this repo
 
 ```bash
-pip install transformers streamlit
+git clone https://github.com/akam-ot/kurdish-ner-app.git
+cd kurdish-ner-app
 ```
 
-```python
-from transformers import pipeline
+### 2. Install dependencies
 
-# load
-ner = pipeline(
-    "ner",
-    model="akam-ot/ku-ner-xlmr",
-    tokenizer="akam-ot/ku-ner-xlmr",
-    aggregation_strategy="simple"
-)
-
-# inference
-tokens = ner("Serokê Komara Fransa, Emanuel Macron, di Parisê de got...")
-print(tokens)
+```bash
+pip install -r requirements.txt
 ```
 
-To launch the demo:
+### 3. Run locally
 
 ```bash
 streamlit run app.py
 ```
 
----
+Then open http://localhost:8501 in your browser.
 
-## License
+## 🚀 Usage
 
-Released under Apache 2.0.
+1. Paste or type a Kurmanji Kurdish sentence (Latin script) into the text area.
+2. Click **Analyze**.
+3. See detected entities (word, label, confidence).
+
+## 📊 Model Performance
+
+| Entity | Precision | Recall | F1 | Support |
+|--------|-----------|--------|----|---------| 
+| PER    | 0.872     | 0.867  | 0.869 | 652     |
+| LOC    | 0.882     | 0.882  | 0.882 | 1,047   |
+| ORG    | 0.728     | 0.793  | 0.759 | 739     |
+| **Overall** | **0.833** | **0.851** | **0.841** | — |
+
+*(Metrics on held-out test set.)*
+
+## 📝 Model Card
+
+See [akam-ot/ku-ner-xlmr](https://huggingface.co/akam-ot/ku-ner-xlmr) on Hugging Face for full details, tags, and license.
+
+
+## 📄 License
+
+Apache 2.0
