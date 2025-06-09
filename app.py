@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from transformers import pipeline
 
@@ -9,7 +10,14 @@ st.markdown("This app uses a fine-tuned XLM-RoBERTa model to recognize named ent
 # Load model pipeline
 @st.cache_resource
 def load_pipeline():
-    return pipeline("ner", model="akam-ot/ku-ner-xlmr", tokenizer="akam-ot/ku-ner-xlmr", grouped_entities=True)
+    token = os.getenv("HUGGINGFACE_HUB_TOKEN")
+    return pipeline(
+        "ner",
+        model="akam-ot/ku-ner-xlmr",
+        tokenizer="akam-ot/ku-ner-xlmr",
+        aggregation_strategy="simple",
+        use_auth_token=token
+    )
 
 ner_pipe = load_pipeline()
 
@@ -23,7 +31,7 @@ if st.button("Analyze"):
     else:
         with st.spinner("Analyzing..."):
             results = ner_pipe(text)
-            filtered = [ent for ent in results if ent['word'].isalnum()]
+            filtered = [ent for ent in results if ent['word'].strip().isalnum()]
 
         if not filtered:
             st.info("No entities detected.")
