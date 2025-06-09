@@ -34,18 +34,12 @@ if st.button("Analyze"):
         st.warning("Please enter some text.")
     else:
         with st.spinner("Analyzing..."):
-            raw_results = ner_pipe(text)
-            filtered = [
-                ent for ent in raw_results
-                if ent["word"].strip().isalnum()
-            ]
+            results = ner_pipe(text)
+            filtered = [ent for ent in results if ent["word"].strip().strip(".,!?\"'()")]
 
         if not filtered:
             st.info("No entities detected.")
         else:
             st.subheader("🔍 Detected Entities:")
             for ent in filtered:
-                word = ent["word"]
-                label = ent["entity_group"]
-                score = ent["score"]
-                st.write(f"• **{word}** → {label} (score: {score:.2f})")
+                st.write(f"• **{ent['word']}** → {ent['entity_group']} (score: {ent['score']:.2f})")
