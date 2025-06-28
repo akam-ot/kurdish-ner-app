@@ -34,11 +34,21 @@ if st.button("Analyze"):
         st.warning("Please enter some text.")
     else:
         with st.spinner("Analyzing..."):
-            results = ner_pipe(text)
-            filtered = [ent for ent in results if ent["word"].strip().strip(".,!?\"'()")]
+            raw_results = ner_pipe(text)
+
+            # Apply confidence threshold (keep only >0.85) & remove single punctuation
+            filtered = []
+            for ent in raw_results:
+                word_clean = ent["word"].strip().strip(".,!?\"'()")
+                if ent["score"] > 0.85 and word_clean and not all(c in ".,!?\"'()" for c in word_clean):
+                    filtered.append({
+                        "word": word_clean,
+                        "entity_group": ent["entity_group"],
+                        "score": ent["score"],
+                    })
 
         if not filtered:
-            st.info("No entities detected.")
+            st.info("No high-confidence entities detected.")
         else:
             st.subheader("🔍 Detected Entities:")
             for ent in filtered:
