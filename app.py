@@ -2,6 +2,7 @@ import streamlit as st
 from transformers import pipeline
 from sentence_splitter import SentenceSplitter
 from supabase import create_client, Client
+import hashlib
 
 # ─────────────────────────────────────────────
 # 1) Supabase connection
@@ -45,7 +46,33 @@ ner_pipe = load_pipeline()
 splitter = get_splitter()
 
 # ─────────────────────────────────────────────
-# 4) Main App Logic
+# 4) Helper functions
+# ─────────────────────────────────────────────
+def create_entity_key(sentence, word):
+    """Create a unique key for an entity to prevent duplicates"""
+    return hashlib.md5(f"{sentence.strip()}_{word.strip()}".encode()).hexdigest()
+
+def deduplicate_entities(entities):
+    """Remove duplicate entities based on sentence and word"""
+    seen = set()
+    unique_entities = []
+    
+    for ent in entities:
+        key = create_entity_key(ent["sentence"], ent["word"])
+        if key not in seen:
+            seen.add(key)
+            unique_entities.append(ent)
+    
+    return unique_entities
+
+# ─────────────────────────────────────────────
+# 5) Initialize session state
+# ─────────────────────────────────────────────
+if "submitted_corrections" not in st.session_state:
+    st.session_state.submitted_corrections = set()
+
+# ─────────────────────────────────────────────
+# 6) Main App Logic
 # ─────────────────────────────────────────────
 text = st.text_area(
     "✍️ Enter a Kurmanji Kurdish paragraph or sentences (Latin alphabet):",
@@ -58,26 +85,36 @@ if st.button("Analyze"):
         st.warning("Please enter some text.")
         st.stop()
 
+    # Reset submitted corrections for new analysis
+    st.session_state.submitted_corrections = set()
+
     with st.spinner("Analyzing..."):
         sentences = splitter.split(text)
         entities = []
 
         for sent in sentences:
-            for ent in ner_pipe(sent):
-                token = ent["word"].strip(" .,!?:;\"'()")
-                if (
-                    ent["score"] > 0.85
-                    and token
-                    and not all(c in ".,!?\"'()" for c in token)
-                ):
-                    entities.append(
-                        {
-                            "sentence": sent.strip(),
-                            "word": token,
-                            "pred": ent["entity_group"],
-                            "score": ent["score"],
-                        }
-                    )
+            try:
+                for ent in ner_pipe(sent):
+                    token = ent["word"].strip(" .,!?:;\"'()")
+                    if (
+                        ent["score"] > 0.85
+                        and token
+                        and not all(c in ".,!?\"'()" for c in token)
+                    ):
+                        entities.append(
+                            {
+                                "sentence": sent.strip(),
+                                "word": token,
+                                "pred": ent["entity_group"],
+                                "score": ent["score"],
+                            }
+                        )
+            except Exception as e:
+                st.error(f"Error processing sentence: {sent[:50]}... - {e}")
+                continue
+
+    # Remove duplicates
+    entities = deduplicate_entities(entities)
 
     if not entities:
         st.info("No high-confidence entities detected.")
@@ -86,39 +123,51 @@ if st.button("Analyze"):
     st.subheader("🔍 Detected Entities (click to correct):")
 
     for idx, ent in enumerate(entities):
+        entity_key = create_entity_key(ent["sentence"], ent["word"])
+        
         st.write(f"**Sentence:** {ent['sentence']}")
         st.write(f"• **{ent['word']}** → {ent['pred']} (score: {ent['score']:.2f})")
 
-        # Feedback form per entity
-        with st.form(f"form_{idx}"):
-            corrected = st.selectbox(
-                "Correct label (if wrong):",
-                ["PER", "LOC", "ORG", "O"],
-                index=["PER", "LOC", "ORG", "O"].index(ent["pred"])
-                if ent["pred"] in ["PER", "LOC", "ORG"]
-                else 3,
-            )
-            submitted = st.form_submit_button("Submit correction")
-            if submitted:
-                data = {
-                    "sentence": ent["sentence"],
-                    "word": ent["word"],
-                    "model_prediction": ent["pred"],
-                    "corrected_label": corrected,
-                    "confidence": ent["score"],
-                }
-                try:
-                    res = supabase.table("entity_feedback").insert(data).execute()
-
-                    # Debug output
-                    st.write("Supabase response:", res)
-
-                    if res.data:
-                        st.success("✅ Correction saved — thank you!")
-                    elif res.error:
-                        st.error(f"❌ Could not save correction: {res.error.message}")
-                    else:
-                        st.error("❌ Unknown error saving correction.")
-
-                except Exception as e:
-                    st.error(f"❌ Exception during submission: {e}")
+        # Check if this entity has been corrected
+        if entity_key in st.session_state.submitted_corrections:
+            st.success("✅ Correction already submitted for this entity!")
+        else:
+            # Feedback form per entity
+            with st.form(f"form_{idx}"):
+                corrected = st.selectbox(
+                    "Correct label (if wrong):",
+                    ["PER", "LOC", "ORG", "O"],
+                    index=["PER", "LOC", "ORG", "O"].index(ent["pred"])
+                    if ent["pred"] in ["PER", "LOC", "ORG"]
+                    else 3,
+                    key=f"select_{idx}"
+                )
+                submitted = st.form_submit_button("Submit correction")
+                
+                if submitted:
+                    data = {
+                        "sentence": ent["sentence"],
+                        "word": ent["word"],
+                        "model_prediction": ent["pred"],
+                        "corrected_label": corrected,
+                        "confidence": ent["score"],
+                    }
+                    
+                    try:
+                        result = supabase.table("entity_feedback").insert(data).execute()
+                        
+                        st.session_state.submitted_corrections.add(entity_key)
+                        st.success(f"✅ Correction saved! {ent['word']} → {corrected}")
+                        st.rerun()  # Refresh to show the updated state
+                        
+                    except Exception as e:
+                        # Handle specific error types
+                        error_msg = str(e)
+                        if "duplicate key" in error_msg.lower():
+                            st.warning("⚠️ This correction has already been submitted.")
+                        elif "network" in error_msg.lower() or "connection" in error_msg.lower():
+                            st.error("❌ Network error. Please check your connection and try again.")
+                        else:
+                            st.error(f"❌ Error saving correction: {error_msg}")
+        
+        st.divider()
