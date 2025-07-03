@@ -139,9 +139,8 @@ display_feedback_messages()
 sample_sentences = [
     "Navê min Hejar e û ez li Hewlêr dijîm.",
     "Ahmed û Fatma li Diyarbekirê dixebitin.",
-    "Zanîngeha Kurdistanê li bajarê Hewlêr e.",
-    "Masoud Barzanî serokê Herêma Kurdistanê bû.",
     "Li Stenbolê gelek kurd dijîn û li wir kar dikin.",
+    "Li Soran û Colemêrgê erd hejiya"
 ]
 
 # Sample sentence selector
@@ -232,16 +231,13 @@ if st.session_state.entities:
                         corrected_label, 
                         ent["score"]
                     ):
-                        # Force a rerun to show the success message
                         st.rerun()
             
-            # Show change indicator below
             if corrected_label != ent["pred"]:
                 st.markdown("🔄 **Will change:** `" + ent["pred"] + "` → `" + corrected_label + "`")
-            else:
-                st.markdown("✅ **No change needed**")
             
             st.divider()
+
 
 # ─────────────────────────────────────────────
 # 8) Sidebar information (collapsed by default)
