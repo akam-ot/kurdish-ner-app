@@ -1,34 +1,33 @@
-import os
 import streamlit as st
 from transformers import pipeline
 from sentence_splitter import SentenceSplitter
 from supabase import create_client, Client
 
-# ─────────────────────────────────────────────────────────────
-# 1) Supabase connection for storing user feedback
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 1) Supabase connection
+# ─────────────────────────────────────────────
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 
 if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-    st.error("❌ SUPABASE_URL or SUPABASE_ANON_KEY not set in secrets.")
+    st.error("❌ SUPABASE_URL or SUPABASE_ANON_KEY not set in Streamlit secrets.")
     st.stop()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# ─────────────────────────────────────────────────────────────
-# 2) Page setup
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 2) Streamlit page config
+# ─────────────────────────────────────────────
 st.set_page_config(page_title="Kurdish NER", layout="centered")
 st.title("🧠 Kurdish NER")
 st.markdown(
     "This app uses a fine-tuned **XLM-RoBERTa** model to recognize named entities in **Kurmanji Kurdish**. "
-    "You can also **correct predictions** to help us improve the system!"
+    "You can also **correct predictions** to help improve the system!"
 )
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 # 3) Cached resources
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 @st.cache_resource
 def load_pipeline():
     return pipeline(
@@ -43,11 +42,11 @@ def get_splitter():
     return SentenceSplitter(language="en")
 
 ner_pipe = load_pipeline()
-splitter  = get_splitter()
+splitter = get_splitter()
 
-# ─────────────────────────────────────────────────────────────
-# 4) Main app
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# 4) Main App Logic
+# ─────────────────────────────────────────────
 text = st.text_area(
     "✍️ Enter a Kurmanji Kurdish paragraph or sentences (Latin alphabet):",
     height=150,
@@ -60,11 +59,9 @@ if st.button("Analyze"):
         st.stop()
 
     with st.spinner("Analyzing..."):
-        # Split into sentences
         sentences = splitter.split(text)
         entities = []
 
-        # Run NER on each sentence
         for sent in sentences:
             for ent in ner_pipe(sent):
                 token = ent["word"].strip(" .,!?:;\"'()")
@@ -86,11 +83,11 @@ if st.button("Analyze"):
         st.info("No high-confidence entities detected.")
         st.stop()
 
-    st.subheader("🔍 Detected entities (click to correct):")
+    st.subheader("🔍 Detected Entities (click to correct):")
 
     for idx, ent in enumerate(entities):
         st.write(f"**Sentence:** {ent['sentence']}")
-        st.write(f"• **{ent['word']}** → {ent['pred']} (score {ent['score']:.2f})")
+        st.write(f"• **{ent['word']}** → {ent['pred']} (score: {ent['score']:.2f})")
 
         # Feedback form per entity
         with st.form(f"form_{idx}"):
@@ -110,15 +107,18 @@ if st.button("Analyze"):
                     "corrected_label": corrected,
                     "confidence": ent["score"],
                 }
-                res = supabase.table("entity_feedback").insert(data).execute()
+                try:
+                    res = supabase.table("entity_feedback").insert(data).execute()
 
-                # Debug output
-                st.write("Supabase response:", res)
+                    # Debug output
+                    st.write("Supabase response:", res)
 
-                # Handle success / error
-                if res.data:
-                    st.success("✅ Correction saved — thank you!")
-                elif res.error:
-                    st.error(f"❌ Could not save correction: {res.error.message}")
-                else:
-                    st.error("❌ Unknown error saving correction.")
+                    if res.data:
+                        st.success("✅ Correction saved — thank you!")
+                    elif res.error:
+                        st.error(f"❌ Could not save correction: {res.error.message}")
+                    else:
+                        st.error("❌ Unknown error saving correction.")
+
+                except Exception as e:
+                    st.error(f"❌ Exception during submission: {e}")
