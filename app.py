@@ -153,21 +153,27 @@ if st.button("Analyze"):
                         "confidence": ent["score"],
                     }
                     
-                    try:
-                        result = supabase.table("entity_feedback").insert(data).execute()
-                        
-                        st.session_state.submitted_corrections.add(entity_key)
-                        st.success(f"✅ Correction saved! {ent['word']} → {corrected}")
-                        st.rerun()  # Refresh to show the updated state
-                        
-                    except Exception as e:
-                        # Handle specific error types
-                        error_msg = str(e)
-                        if "duplicate key" in error_msg.lower():
-                            st.warning("⚠️ This correction has already been submitted.")
-                        elif "network" in error_msg.lower() or "connection" in error_msg.lower():
-                            st.error("❌ Network error. Please check your connection and try again.")
-                        else:
-                            st.error(f"❌ Error saving correction: {error_msg}")
+                    # Show immediate feedback
+                    with st.spinner("Saving correction..."):
+                        try:
+                            result = supabase.table("entity_feedback").insert(data).execute()
+                            
+                            st.session_state.submitted_corrections.add(entity_key)
+                            st.success(f"✅ Correction saved! {ent['word']} → {corrected}")
+                            
+                            st.info("💡 Refresh the page to see updated status")
+                            
+                        except Exception as e:
+                            # Handle specific error types
+                            error_msg = str(e)
+                            if "duplicate key" in error_msg.lower():
+                                st.warning("⚠️ This correction has already been submitted.")
+                            elif "network" in error_msg.lower() or "connection" in error_msg.lower():
+                                st.error("❌ Network error. Please check your connection and try again.")
+                            else:
+                                st.error(f"❌ Error saving correction: {error_msg}")
+                                with st.expander("🔧 Full error details"):
+                                    st.code(str(e))
         
         st.divider()
+
