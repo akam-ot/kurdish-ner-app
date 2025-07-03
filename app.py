@@ -16,81 +16,11 @@ if not SUPABASE_URL or not SUPABASE_ANON_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-
 # ─────────────────────────────────────────────
 # 2) Streamlit page config
 # ─────────────────────────────────────────────
-st.set_page_config(page_title="Kurdish NER", layout="centered", page_icon="🧠")
-
-st.markdown("""
-<style>
-    .main-header {
-        text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
-    
-    .entity-card {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .entity-word {
-        background: #e3f2fd;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-weight: bold;
-        color: #1976d2;
-    }
-    
-    .entity-label {
-        background: #f3e5f5;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-weight: bold;
-        color: #7b1fa2;
-    }
-    
-    .sample-box {
-        background: #fff3e0;
-        border: 1px solid #ffcc02;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .stButton > button {
-        width: 100%;
-        height: 2.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-    
-    .metric-card {
-        background: white;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e0e0e0;
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Header
-st.markdown("""
-<div class="main-header">
-    <h1>🧠 Kurdish NER</h1>
-    <p>Advanced Named Entity Recognition for Kurmanji Kurdish</p>
-</div>
-""", unsafe_allow_html=True)
-
+st.set_page_config(page_title="Kurdish NER", layout="centered")
+st.title("🧠 Kurdish NER")
 st.markdown(
     "This app uses a fine-tuned **XLM-RoBERTa** model to recognize named entities in **Kurmanji Kurdish**. "
     "You can also **correct predictions** to help improve the system!"
@@ -116,18 +46,7 @@ ner_pipe = load_pipeline()
 splitter = get_splitter()
 
 # ─────────────────────────────────────────────
-# 4) Sample sentences
-# ─────────────────────────────────────────────
-SAMPLE_SENTENCES = [
-    "Navê min Hejar e û ez li Hewlêr dijîm.",
-    "Serok Obama û Merkel li Washington hevdîtin kirin.",
-    "Zanîngeha Dihokê li Kurdistanê ye.",
-    "Rojnamevana BBC li Londonê kar dike.",
-    "Wezîrê Pêşmerge yê Herêma Kurdistanê axivî.",
-]
-
-# ─────────────────────────────────────────────
-# 5) Initialize session state
+# 4) Initialize session state
 # ─────────────────────────────────────────────
 if "entities" not in st.session_state:
     st.session_state.entities = []
@@ -166,7 +85,7 @@ def save_correction(sentence, word, model_pred, corrected_label, confidence):
         "word": word,
         "model_prediction": model_pred,
         "corrected_label": corrected_label,
-        "confidence": float(confidence),
+        "confidence": float(confidence),  # Convert numpy float32 to Python float
     }
     
     try:
@@ -202,7 +121,7 @@ def process_text(text):
                         "sentence": sent.strip(),
                         "word": token,
                         "pred": ent["entity_group"],
-                        "score": float(ent["score"]), 
+                        "score": float(ent["score"]),  # Convert numpy float32 to Python float
                     })
         except Exception as e:
             add_feedback_message("error", f"Error processing sentence: {str(e)}")
@@ -216,35 +135,39 @@ def process_text(text):
 # Display any feedback messages
 display_feedback_messages()
 
-# Sample sentences section
-st.markdown("### 📝 Try These Sample Sentences")
-st.markdown('<div class="sample-box">', unsafe_allow_html=True)
+# Sample sentences
+sample_sentences = [
+    "Navê min Hejar e û ez li Hewlêr dijîm.",
+    "Ahmed û Fatma li Diyarbekirê dixebitin.",
+    "Zanîngeha Kurdistanê li bajarê Hewlêr e.",
+    "Masoud Barzanî serokê Herêma Kurdistanê bû.",
+    "Li Stenbolê gelek kurd dijîn û li wir kar dikin.",
+]
 
-# Create columns for sample sentences
-cols = st.columns(2)
-for i, sample in enumerate(SAMPLE_SENTENCES):
-    with cols[i % 2]:
-        if st.button(f"📄 {sample[:30]}{'...' if len(sample) > 30 else ''}", 
-                    key=f"sample_{i}",
-                    help=sample):
-            st.session_state.selected_sample = sample
-            st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Input text area
-default_text = st.session_state.get('selected_sample', '')
-text = st.text_area(
-    "✍️ Enter a Kurmanji Kurdish paragraph or sentences (Latin alphabet):",
-    height=120,
-    placeholder="Navê min Hejar e û ez li Hewlêr dijîm.",
-    key="input_text",
-    value=default_text
+# Sample sentence selector
+st.subheader("📝 Choose a sample or enter your own text:")
+selected_sample = st.selectbox(
+    "Select a sample sentence:",
+    [""] + sample_sentences,
+    index=0,
+    help="Choose a sample sentence to analyze, or leave blank to enter your own text"
 )
 
-# Clear the selected sample after it's been used
-if 'selected_sample' in st.session_state:
-    del st.session_state.selected_sample
+# Input text area
+if selected_sample:
+    text = st.text_area(
+        "✍️ Kurdish text (you can edit the selected sample):",
+        value=selected_sample,
+        height=150,
+        key="input_text"
+    )
+else:
+    text = st.text_area(
+        "✍️ Enter a Kurmanji Kurdish paragraph or sentences (Latin alphabet):",
+        height=150,
+        placeholder="Navê min Hejar e û ez li Hewlêr dijîm.",
+        key="input_text"
+    )
 
 # Analyze button
 if st.button("🔍 Analyze Text", type="primary"):
@@ -278,115 +201,78 @@ if st.button("🔍 Analyze Text", type="primary"):
 # 7) Display entities and correction interface
 # ─────────────────────────────────────────────
 if st.session_state.entities:
-    st.markdown("### 🔍 Detected Entities")
+    st.subheader("🔍 Detected Entities")
     
     for idx, ent in enumerate(st.session_state.entities):
-        st.markdown(f'<div class="entity-card">', unsafe_allow_html=True)
-        
-        # Entity information
-        st.markdown(f"**📄 Sentence:** {ent['sentence']}")
-        st.markdown(f"**🏷️ Entity:** <span class='entity-word'>{ent['word']}</span> → "
-                   f"<span class='entity-label'>{ent['pred']}</span> "
-                   f"(confidence: {ent['score']:.2f})", unsafe_allow_html=True)
-        
-        # Correction interface with better alignment
-        col1, col2, col3 = st.columns([3, 2, 1])
-        
-        with col1:
-            correction_key = f"correction_{idx}"
-            corrected_label = st.selectbox(
-                "🔧 Correct label:",
-                options=["PER", "LOC", "ORG", "O"],
-                index=["PER", "LOC", "ORG", "O"].index(ent["pred"]) if ent["pred"] in ["PER", "LOC", "ORG"] else 3,
-                key=correction_key,
-                help="Select the correct entity type"
-            )
-        
-        with col2:
-            # Status indicator
-            if corrected_label != ent["pred"]:
-                st.markdown("**🔄 Status:** Changed")
-            else:
-                st.markdown("**✅ Status:** Same")
-        
-        with col3:
-            # Aligned save button
-            st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
-            if st.button("💾 Save", key=f"save_{idx}", help="Save correction to database"):
-                clear_feedback_messages()
+        with st.container():
+            st.markdown(f"**Sentence:** {ent['sentence']}")
+            st.markdown(f"**Word:** `{ent['word']}` → **{ent['pred']}** (confidence: {ent['score']:.2f})")
+            
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                correction_key = f"correction_{idx}"
+                corrected_label = st.selectbox(
+                    "Correct label:",
+                    options=["PER", "LOC", "ORG", "O"],
+                    index=["PER", "LOC", "ORG", "O"].index(ent["pred"]) if ent["pred"] in ["PER", "LOC", "ORG"] else 3,
+                    key=correction_key
+                )
+            
+            with col2:
+                st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
                 
-                if save_correction(
-                    ent["sentence"], 
-                    ent["word"], 
-                    ent["pred"], 
-                    corrected_label, 
-                    ent["score"]
-                ):
-                    st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("💾 Save", key=f"save_{idx}", use_container_width=True):
+                    clear_feedback_messages()
+                    
+                    if save_correction(
+                        ent["sentence"], 
+                        ent["word"], 
+                        ent["pred"], 
+                        corrected_label, 
+                        ent["score"]
+                    ):
+                        # Force a rerun to show the success message
+                        st.rerun()
+            
+            # Show change indicator below
+            if corrected_label != ent["pred"]:
+                st.markdown("🔄 **Will change:** `" + ent["pred"] + "` → `" + corrected_label + "`")
+            else:
+                st.markdown("✅ **No change needed**")
+            
+            st.divider()
 
 # ─────────────────────────────────────────────
-# 8) Sidebar information
+# 8) Sidebar information (collapsed by default)
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ℹ️ Information")
-    
-    # Entity types info
-    st.markdown("""
-    **🏷️ Entity Types:**
-    - **PER**: Person names (e.g., Obama, Merkel)
-    - **LOC**: Locations (e.g., Hewlêr, Washington)
-    - **ORG**: Organizations (e.g., BBC, UN)
-    - **O**: Not an entity
-    """)
-    
-    # Instructions
-    st.markdown("""
-    **📋 How to use:**
-    1. 📄 Try a sample sentence or enter your own
-    2. 🔍 Click "Analyze Text"
-    3. 👀 Review detected entities
-    4. 🔧 Correct wrong predictions
-    5. 💾 Save corrections to help improve the model
-    """)
-    
-    # Current analysis stats
-    if st.session_state.entities:
-        st.markdown("### 📊 Current Analysis")
+    # Sidebar is collapsed by default, only show if user wants info
+    if st.checkbox("ℹ️ Show Help & Info"):
+        st.header("Information")
+        st.markdown("""
+        **Entity Types:**
+        - **PER**: Person names
+        - **LOC**: Locations
+        - **ORG**: Organizations
+        - **O**: Not an entity
         
-        # Create metric cards
-        total_entities = len(st.session_state.entities)
-        st.markdown(f'<div class="metric-card"><h3>{total_entities}</h3><p>Entities Found</p></div>', 
-                   unsafe_allow_html=True)
+        **How to use:**
+        1. Select a sample or enter Kurdish text
+        2. Click "Analyze Text"
+        3. Review detected entities
+        4. Correct any wrong predictions
+        5. Click "Save" to submit corrections
+        """)
         
-        # Count by type
-        entity_counts = {}
-        for ent in st.session_state.entities:
-            entity_counts[ent["pred"]] = entity_counts.get(ent["pred"], 0) + 1
-        
-        st.markdown("**📈 By Type:**")
-        for entity_type, count in entity_counts.items():
-            percentage = (count / total_entities) * 100
-            st.markdown(f"- **{entity_type}**: {count} ({percentage:.1f}%)")
-        
-        # Average confidence
-        avg_conf = sum(ent["score"] for ent in st.session_state.entities) / total_entities
-        st.markdown(f"**🎯 Avg Confidence**: {avg_conf:.2f}")
-    
-    # Additional info
-    st.markdown("---")
-    st.markdown("""
-    **🔬 About the Model:**
-    - Based on XLM-RoBERTa
-    - Fine-tuned for Kurdish
-    - Supports Latin script
-    """)
-    
-    st.markdown("""
-    **💡 Tips:**
-    - Use clear, well-formed sentences
-    - Check for proper names and locations
-    - Your corrections help improve the model
-    """)
+        if st.session_state.entities:
+            st.markdown(f"**Current Analysis:**")
+            st.markdown(f"- {len(st.session_state.entities)} entities found")
+            
+            # Count by type
+            entity_counts = {}
+            for ent in st.session_state.entities:
+                entity_counts[ent["pred"]] = entity_counts.get(ent["pred"], 0) + 1
+            
+            for entity_type, count in entity_counts.items():
+                st.markdown(f"- {entity_type}: {count}")
