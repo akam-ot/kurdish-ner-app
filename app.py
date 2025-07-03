@@ -5,8 +5,8 @@ from sentence_splitter import SentenceSplitter
 from supabase import create_client, Client
 
 # 1) Supabase connection for storing user feedback
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_ANON_KEY = st.secrets["SUPABASE_ANON_KEY"]
 
 if not SUPABASE_URL or not SUPABASE_ANON_KEY:
     st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set as environment variables / secrets.")
