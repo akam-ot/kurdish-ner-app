@@ -85,7 +85,7 @@ def save_correction(sentence, word, model_pred, corrected_label, confidence):
         "word": word,
         "model_prediction": model_pred,
         "corrected_label": corrected_label,
-        "confidence": confidence,
+        "confidence": float(confidence),  # Convert numpy float32 to Python float
     }
     
     try:
@@ -121,7 +121,7 @@ def process_text(text):
                         "sentence": sent.strip(),
                         "word": token,
                         "pred": ent["entity_group"],
-                        "score": ent["score"],
+                        "score": float(ent["score"]),  # Convert numpy float32 to Python float
                     })
         except Exception as e:
             add_feedback_message("error", f"Error processing sentence: {str(e)}")
